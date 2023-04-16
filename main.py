@@ -10,14 +10,14 @@ from PyQt5.QtGui import QMovie
 import sys
 
 #Chunk is the frames per buffer of the audio stream
-CHUNK = 1024 * 4
+CHUNK = 1024 * 2
 SHOW_GRAPHS = True #todo- does not work if set to false??? WHY THOUGH PYTHON
 IS_RUNNING = True
-TARGET_FREQ =20000
+TARGET_FREQ =15000
 
 CURRENT_ANIM_FRAME = -1
 TOTAL_FRAMES = 36
-TRIGGER_MOVIE_THRESHOLD =  0.04 # Amplitude of FFT that will
+TRIGGER_MOVIE_THRESHOLD =  0.001 # Amplitude of FFT that will
 p = pyaudio.PyAudio()
 
 
@@ -31,6 +31,7 @@ class Ui_MainWindow(object):
 
         # create label
         self.label = QtWidgets.QLabel(self.centralwidget)
+        self.label.setStyleSheet("QLAbel { background-color : white; }")
         self.label.setGeometry(QtCore.QRect(0, 0, 580, 500))
         self.label.setMinimumSize(QtCore.QSize(580, 500))
         self.label.setMaximumSize(QtCore.QSize(580, 500))
@@ -40,10 +41,11 @@ class Ui_MainWindow(object):
         MainWindow.setCentralWidget(self.centralwidget)
 
         # set qmovie as label
-        self.movie = QMovie("deal.gif")
+        self.movie = QMovie("./deal.gif")
         
     def startVideo(self):
          self.label.setMovie(self.movie)
+         self.movie.setSpeed(150)
          self.movie.start()
         #  CURRENT_ANIM_FRAME = 1
          return self.movie
@@ -84,7 +86,7 @@ if not default_speakers["isLoopbackDevice"]:
 
 # ----------------   initializing graphs ------------------
 if SHOW_GRAPHS:
-    plt.ion()
+    # plt.ion()
 
     fig = plt.figure()
     ax = fig.add_subplot()
@@ -134,7 +136,7 @@ while IS_RUNNING:
     y_fft = fft(data_np)
     y_data= np.abs(y_fft[0:CHUNK]) * 2 / (32767 * CHUNK) 
     # check the FFT data, index 1706 is where 20khz is.
-    if y_data[target_freq_index] > 0.04:
+    if y_data[target_freq_index] > TRIGGER_MOVIE_THRESHOLD:
         print("DEAL WITH IT")
         movie_ref =  ui.startVideo()
         CURRENT_ANIM_FRAME =1
@@ -150,7 +152,7 @@ while IS_RUNNING:
         fig2.canvas.flush_events()
 
     print(CURRENT_ANIM_FRAME)
-    if CURRENT_ANIM_FRAME > 0:
+    if CURRENT_ANIM_FRAME >= 0:
         try:
             CURRENT_ANIM_FRAME = movie_ref.currentFrameNumber()
      
