@@ -10,14 +10,15 @@ from PyQt5.QtGui import QMovie
 import sys
 
 #Chunk is the frames per buffer of the audio stream
-CHUNK = 1024 * 2
+CHUNK = 1024 * 4
 SHOW_GRAPHS = True #todo- does not work if set to false??? WHY THOUGH PYTHON
 IS_RUNNING = True
 TARGET_FREQ =15000
 
 CURRENT_ANIM_FRAME = -1
 TOTAL_FRAMES = 36
-TRIGGER_MOVIE_THRESHOLD =  0.001 # Amplitude of FFT that will
+TRIGGER_MOVIE_THRESHOLD =  0.0025 # Amplitude of FFT that will
+PREV_MAX = 0.00
 p = pyaudio.PyAudio()
 
 
@@ -85,9 +86,8 @@ if not default_speakers["isLoopbackDevice"]:
 
 
 # ----------------   initializing graphs ------------------
-if SHOW_GRAPHS:
-    # plt.ion()
-
+if SHOW_GRAPHS: 
+    plt.ion()
     fig = plt.figure()
     ax = fig.add_subplot()
 
@@ -133,15 +133,20 @@ while IS_RUNNING:
         print("No audio detected right now.")
     data_np = np.frombuffer(data_bytes, dtype=np.int16) 
 
-    y_fft = fft(data_np)
-    y_data= np.abs(y_fft[0:CHUNK]) * 2 / (32767 * CHUNK) 
-    # check the FFT data, index 1706 is where 20khz is.
-    if y_data[target_freq_index] > TRIGGER_MOVIE_THRESHOLD:
-        print("DEAL WITH IT")
-        movie_ref =  ui.startVideo()
-        CURRENT_ANIM_FRAME =1
-    print("")
-    
+    if CURRENT_ANIM_FRAME < 0:
+        y_fft = fft(data_np)
+        y_data= np.abs(y_fft[0:CHUNK]) * 2 / (32767 * CHUNK) 
+        # check the FFT data, index 1706 is where 20khz is.
+        if y_data[target_freq_index] > PREV_MAX:
+            PREV_MAX = y_data[target_freq_index]
+        # print(PREV_MAX)
+        if y_data[target_freq_index] > TRIGGER_MOVIE_THRESHOLD:
+            print(y_data[target_freq_index])
+            movie_ref =  ui.startVideo()
+            CURRENT_ANIM_FRAME =1
+        # print("")
+    else:
+        y_data = 0.0
     #draw graphs
     if SHOW_GRAPHS:
         line.set_ydata(data_np)
@@ -151,7 +156,7 @@ while IS_RUNNING:
         fig2.canvas.draw()
         fig2.canvas.flush_events()
 
-    print(CURRENT_ANIM_FRAME)
+    # print(CURRENT_ANIM_FRAME)
     if CURRENT_ANIM_FRAME >= 0:
         try:
             CURRENT_ANIM_FRAME = movie_ref.currentFrameNumber()
